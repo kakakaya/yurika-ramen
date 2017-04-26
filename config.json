@@ -1,0 +1,17 @@
+{
+    "user_id": "eggs@example.com",
+    "user_pw": "nice_password_here",
+    "api_base_url": "https://kirakiratter.com",
+    "morning_messages": [
+        "まだ朝じゃない！"
+    ],
+    "noon_messages": [
+        "お昼はラーメンよ！"
+    ],
+    "eveneng_messages": [
+        "一日の終わりはスープを吸うわよ！"
+    ],
+    "midnight_messages": [
+        "夜は吸血鬼の時間よ！"
+    ]
+}
