@@ -89,3 +89,4 @@ ENV/
 .ropeproject
 /client.secret
 /user.secret
+/config.json
