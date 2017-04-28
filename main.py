@@ -38,22 +38,41 @@ def eat_ramen(mastodon_client, config, messages):
     if not res.ok:
         message = choice(messages)+"……と思ったけど、ファンがいるから退散するわ！"
     else:
-        rest = choice(res['rest'])
+        rest = choice(res.json()['rest'])
         message = choice(messages)
-        message += "{pref}にある{name}に来たわ！ PRポイントは「{pr}」みたいね。アクセスは{line}{station}から徒歩{walk}分！  URL: {url} {url1} {url2}".format(
+
+        image_urls = []
+        for image_url in [rest["image_url"]["shop_image1"], rest["image_url"]["shop_image2"]]:
+            if len(image_url) < 10:
+                continue
+            image = requests.get(image_url, stream=True)
+            if not image.ok:
+                continue
+            file_location = "/tmp/"+image.url.split("/")[-1]
+            with open(file_location, "wb") as f:
+                f.write(image.content)
+            image_post = mastodon_client.media_post(file_location)
+            image_urls.append(image_post["text_url"])
+
+        image_urls = " ".join(image_urls)
+        message += """
+{pref}にある{name}に来たわ！
+PRポイントは「{pr}」みたいね。
+
+アクセスは{line}{station}から{walk}分！
+URL: {url} {image_url}""".format(
             pref=rest["code"]["prefname"],
             name=rest["name"].strip(),
             line=rest["access"]["line"],
             station=rest["access"]["station"],
             walk=rest["access"]["walk"],
             url=rest["url"],
-            url1=rest["image_url"]["shop_image1"],
-            url2=rest["image_url"]["shop_image2"],
+            image_url=image_urls,
             pr=rest["pr"]["pr_short"]
         )
 
-    # mastodon_client.toot(message)
-    print(message)
+    # print(message)
+    mastodon_client.toot(message)
 
 
 def main():
