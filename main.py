@@ -29,7 +29,7 @@ def eat_ramen(mastodon_client, config, messages):
     res = requests.get("http://api.gnavi.co.jp/RestSearchAPI/20150630/",
                        params={
                            "keyid": keyid,
-                           "freeword": "ラーメン",
+                           "category_s": "RSFST08008",
                            "format": "json",
                            "pref": pref["pref_code"],
                            "hit_per_page": 100
