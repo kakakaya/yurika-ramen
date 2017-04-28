@@ -38,7 +38,14 @@ def eat_ramen(mastodon_client, config, messages):
     if not res.ok:
         message = choice(messages)+"……と思ったけど、ファンがいるから退散するわ！"
     else:
-        rest = choice(res.json()['rest'])
+        rests = res.json()['rest']
+        if type(rests) is dict:
+            rest = rests
+        elif type(rests) is list:
+            rest = choice(rests)
+        else:
+            print("Unknown type of rests: "+str(type(rests)))
+            return
         message = choice(messages)
 
         image_urls = []
