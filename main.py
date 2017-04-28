@@ -107,7 +107,7 @@ def main():
         eat_ramen,
         mastodon_client=mastodon,
         config=config,
-        messages=config["evenenig_messages"] + config["everytime_messages"])
+        messages=config["evening_messages"] + config["everytime_messages"])
     schedule.every().day.at("01:30").do(
         eat_ramen,
         mastodon_client=mastodon,
