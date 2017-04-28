@@ -5,6 +5,7 @@
 from random import choice
 import schedule
 from mastodon import Mastodon
+import time
 import json
 import requests
 
@@ -113,6 +114,10 @@ def main():
         mastodon_client=mastodon,
         config=config,
         messages=config["midnight_messages"] + config["everytime_messages"])
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 
 if __name__ == "__main__":
