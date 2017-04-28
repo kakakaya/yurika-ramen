@@ -83,7 +83,7 @@ URL: {url}""".format(
             pr=rest["pr"]["pr_short"])
 
     # print(message)
-    mastodon_client.status_post(media_ids=image_ids, message)
+    mastodon_client.status_post(message, media_ids=image_ids)
 
 
 def main():
