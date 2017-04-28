@@ -87,3 +87,6 @@ ENV/
 
 # Rope project settings
 .ropeproject
+/client.secret
+/user.secret
+/config.json
