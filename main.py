@@ -47,7 +47,7 @@ def eat_ramen(mastodon_client, config, messages):
             return
         message = choice(messages)
 
-        image_urls = []
+        image_ids = []
         for image_url in [
                 rest["image_url"]["shop_image1"],
                 rest["image_url"]["shop_image2"]
@@ -61,9 +61,8 @@ def eat_ramen(mastodon_client, config, messages):
             with open(file_location, "wb") as f:
                 f.write(image.content)
             image_post = mastodon_client.media_post(file_location)
-            image_urls.append(image_post["url"])
+            image_ids.append(image_post["id"])
 
-        image_urls = " ".join(image_urls)
         if rest["access"]["line"]:
             access = "アクセスは{line}{station}から{walk}分！\n".format(
                 line=rest["access"]["line"],
@@ -76,16 +75,15 @@ def eat_ramen(mastodon_client, config, messages):
 {pref}にある{name}に来たわ！
 PRポイントは「{pr}」みたいね。
 {access}
-URL: {url} {image_url}""".format(
+URL: {url}""".format(
             pref=rest["code"]["prefname"],
             name=rest["name"].strip(),
             access=access,
             url=rest["url"],
-            image_url=image_urls,
             pr=rest["pr"]["pr_short"])
 
     # print(message)
-    mastodon_client.toot(message)
+    mastodon_client.status_post(media_ids=image_ids, message)
 
 
 def main():
