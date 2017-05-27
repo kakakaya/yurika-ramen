@@ -18,7 +18,7 @@ def make_credential(user_id, user_pw, api_base_url):
     return m
 
 
-def eat_ramen(mastodon_client, config, messages):
+def get_ramen(config):
     keyid = config["gurunavi_keyid"]
     prefs = requests.get(
         "https://api.gnavi.co.jp/master/PrefSearchAPI/20150630/",
@@ -45,11 +45,13 @@ def eat_ramen(mastodon_client, config, messages):
             rest = choice(rests)
         else:
             print("Unknown type of rests: " + str(type(rests)))
-            return
+            return "", []
         message = choice(messages)
 
+        if not rest["pr"]:
+            return "", []
         image_ids = []
-        for image_url in [
+        for image_url in u[
                 rest["image_url"]["shop_image1"],
                 rest["image_url"]["shop_image2"]
         ]:
@@ -64,7 +66,7 @@ def eat_ramen(mastodon_client, config, messages):
             image_post = mastodon_client.media_post(file_location)
             image_ids.append(image_post["id"])
 
-        if rest["access"]["line"]:
+        if rest["access"]["station"]:
             access = "アクセスは{line}{station}から{walk}分！\n".format(
                 line=rest["access"]["line"],
                 station=rest["access"]["station"],
@@ -82,9 +84,15 @@ URL: {url}""".format(
             access=access,
             url=rest["url"],
             pr=rest["pr"]["pr_short"])
+    return message, media_ids
 
+
+def eat_ramen(mastodon_client, config, messages):
+    message = ""
+    while not message:
+        message, media_ids = get_ramen(config, messages)
     # print(message)
-    mastodon_client.status_post(message, media_ids=image_ids)
+    mastodon_client.status_post(message, media_ids=media_ids)
 
 
 def main():
