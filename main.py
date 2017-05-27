@@ -2,9 +2,11 @@
 # -*- coding:utf-8 -*-
 # Author: kakakaya, Date: Thu Apr 27 02:59:00 2017
 # from pprint import pprint as p
-from random import choice
+import logging
+from random import choice, random
 import schedule
 from mastodon import Mastodon
+import time
 import json
 import requests
 
@@ -35,7 +37,9 @@ def get_ramen(config):
                            "hit_per_page": 100
                        })
     if not res.ok:
-        message = choice(messages) + "……と思ったけど、ファンがいるから退散するわ！"
+        # Bad result; skip this.
+        return False, res
+
     else:
         rests = res.json()['rest']
         if type(rests) is dict:
@@ -44,57 +48,79 @@ def get_ramen(config):
             rest = choice(rests)
         else:
             print("Unknown type of rests: " + str(type(rests)))
-            return "", []
-        message = choice(messages)
+            return False, res
 
-        if not rest["pr"]:
-            return "", []
-        image_ids = []
-        for image_url in u[
-                rest["image_url"]["shop_image1"],
-                rest["image_url"]["shop_image2"]
-        ]:
-            if len(image_url) < 10:
-                continue
-            image = requests.get(image_url, stream=True)
-            if not image.ok:
-                continue
-            file_location = "/tmp/" + image.url.split("/")[-1]
-            with open(file_location, "wb") as f:
-                f.write(image.content)
-            image_post = mastodon_client.media_post(file_location)
-            image_ids.append(image_post["id"])
+        if not (rest["pr"] and rest["pr"]["pr_short"]):
+            return False, res
 
-        if rest["access"]["station"]:
-            access = "アクセスは{line}{station}から{walk}分！\n".format(
-                line=rest["access"]["line"],
-                station=rest["access"]["station"],
-                walk=rest["access"]["walk"]
-            )
         else:
-            access = ""
-        message += """
+            return True, rest
+
+
+def eat_ramen(config, mastodon_client):
+    logger = logging.getLogger(__name__)
+    ok, ramen = get_ramen(config)
+    if not ok:
+        logger.info("Bad ramen: %d", ramen.status_code)
+        return False, []
+    # 正常系
+    image_ids = []
+    logger.debug("Ramen image url: %s", ramen["image_url"])
+    for image_url in [
+            ramen["image_url"]["shop_image1"],
+            ramen["image_url"]["shop_image2"]
+    ]:
+        if len(image_url) < 10:
+            continue
+        image = requests.get(image_url, stream=True)
+        if not image.ok:
+            continue
+        file_location = "/tmp/" + image.url.split("/")[-1]
+        with open(file_location, "wb") as f:
+            f.write(image.content)
+        image_post = mastodon_client.media_post(file_location)
+        print(image_post)
+        image_ids.append(image_post["id"])
+
+    if ramen["access"]["station"]:
+        access = "アクセスは{line}{station}から{walk}分！\n".format(
+            line=ramen["access"]["line"],
+            station=ramen["access"]["station"],
+            walk=ramen["access"]["walk"])
+    else:
+        access = ""
+    message = """
 {pref}にある{name}に来たわ！
 PRポイントは「{pr}」みたいね。
 {access}
 URL: {url}""".format(
-            pref=rest["code"]["prefname"],
-            name=rest["name"].strip(),
-            access=access,
-            url=rest["url"],
-            pr=rest["pr"]["pr_short"])
-    return message, media_ids
+        pref=ramen["code"]["prefname"],
+        name=ramen["name"].strip(),
+        access=access,
+        url=ramen["url"],
+        pr=ramen["pr"]["pr_short"].replace("<BR>", ""))
+    return message, image_ids
 
 
-def eat_ramen(mastodon_client, config, messages):
-    message = ""
-    while not message:
-        message, media_ids = get_ramen(config, messages)
-    # print(message)
-    mastodon_client.status_post(message, media_ids=media_ids)
+def post_ramen(mastodon_client, config, messages):
+    logger = logging.getLogger(__name__)
+    for _ in range(10):
+        message, media_ids = eat_ramen(config, mastodon_client)
+        if message:
+            break
+    message = choice(messages) + message
+    # time.sleep(60*30*random())
+    status = mastodon_client.status_post(message, media_ids=media_ids)
+    logger.info(status.url)
+    logger.debug("Successfully post status: %s", status)
 
 
 def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s:%(levelname)6s:%(name)10s:%(lineno)4d:%(funcName)10s: %(message)s',
+        datefmt="%Y-%m-%d_%H-%M-%S", )
+
     with open("config.json") as f:
         config = json.load(f)
 
@@ -102,25 +128,29 @@ def main():
                                config["api_base_url"])
 
     schedule.every().day.at("09:00").do(
-        eat_ramen,
+        post_ramen,
         mastodon_client=mastodon,
         config=config,
         messages=config["morning_messages"] + config["everytime_messages"])
     schedule.every().day.at("12:30").do(
-        eat_ramen,
+        post_ramen,
         mastodon_client=mastodon,
         config=config,
         messages=config["noon_messages"] + config["everytime_messages"])
     schedule.every().day.at("19:00").do(
-        eat_ramen,
+        post_ramen,
         mastodon_client=mastodon,
         config=config,
-        messages=config["evenenig_messages"] + config["everytime_messages"])
+        messages=config["evening_messages"] + config["everytime_messages"])
     schedule.every().day.at("01:30").do(
-        eat_ramen,
+        post_ramen,
         mastodon_client=mastodon,
         config=config,
         messages=config["midnight_messages"] + config["everytime_messages"])
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 
 if __name__ == "__main__":
