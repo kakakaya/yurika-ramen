@@ -132,7 +132,7 @@ def main():
         mastodon_client=mastodon,
         config=config,
         messages=config["morning_messages"] + config["everytime_messages"])
-    schedule.every().day.at("12:30").do(
+    schedule.every().day.at("12:00").do(
         post_ramen,
         mastodon_client=mastodon,
         config=config,
@@ -142,12 +142,14 @@ def main():
         mastodon_client=mastodon,
         config=config,
         messages=config["evening_messages"] + config["everytime_messages"])
-    schedule.every().day.at("01:30").do(
+    schedule.every().day.at("01:00").do(
         post_ramen,
         mastodon_client=mastodon,
         config=config,
         messages=config["midnight_messages"] + config["everytime_messages"])
 
+    logger = logging.getLogger(__name__)
+    logger.info("Started: ユリカ「まだ朝じゃない！」")
     while True:
         schedule.run_pending()
         time.sleep(1)
