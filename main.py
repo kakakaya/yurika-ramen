@@ -38,7 +38,7 @@ def get_ramen(config):
                        })
     if not res.ok:
         # Bad result; skip this.
-        return False, {}
+        return False, res
 
     else:
         rests = res.json()['rest']
@@ -48,22 +48,24 @@ def get_ramen(config):
             rest = choice(rests)
         else:
             print("Unknown type of rests: " + str(type(rests)))
-            return False, {}
+            return False, res
 
         if not (rest["pr"] and rest["pr"]["pr_short"]):
-            return False, {}
+            return False, res
 
         else:
             return True, rest
 
 
 def eat_ramen(config, mastodon_client):
+    logger = logging.getLogger(__name__)
     ok, ramen = get_ramen(config)
     if not ok:
-        return False, False
+        logger.info("Bad ramen(%d): %s", ramen.status_code, ramen.json())
+        return False, []
     # 正常系
     image_ids = []
-    print(ramen["image_url"])
+    logger.debug("Ramen image url: %s", ramen["image_url"])
     for image_url in [
             ramen["image_url"]["shop_image1"],
             ramen["image_url"]["shop_image2"]
@@ -101,16 +103,22 @@ URL: {url}""".format(
 
 
 def post_ramen(mastodon_client, config, messages):
+    logger = logging.getLogger(__name__)
     for _ in range(10):
         message, media_ids = eat_ramen(config, mastodon_client)
         if message:
             break
     message = choice(messages) + message
-    time.sleep(30 * 60 * random())
-    mastodon_client.status_post(message, media_ids=media_ids)
+    status = mastodon_client.status_post(message, media_ids=media_ids)
+    logger.info("Successfully post status: %s", status)
 
 
 def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s:%(levelname)6s:%(name)10s:%(lineno)4d:%(funcName)10s: %(message)s',
+        datefmt="%Y-%m-%d_%H-%M-%S", )
+
     with open("config.json") as f:
         config = json.load(f)
 
