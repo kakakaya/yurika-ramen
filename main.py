@@ -61,7 +61,7 @@ def eat_ramen(config, mastodon_client):
     logger = logging.getLogger(__name__)
     ok, ramen = get_ramen(config)
     if not ok:
-        logger.info("Bad ramen(%d): %s", ramen.status_code, ramen.json())
+        logger.info("Bad ramen: %d", ramen.status_code)
         return False, []
     # 正常系
     image_ids = []
@@ -109,8 +109,10 @@ def post_ramen(mastodon_client, config, messages):
         if message:
             break
     message = choice(messages) + message
+    # time.sleep(60*30*random())
     status = mastodon_client.status_post(message, media_ids=media_ids)
-    logger.info("Successfully post status: %s", status)
+    logger.info(status.url)
+    logger.debug("Successfully post status: %s", status)
 
 
 def main():
