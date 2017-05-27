@@ -2,7 +2,7 @@
 # -*- coding:utf-8 -*-
 # Author: kakakaya, Date: Thu Apr 27 02:59:00 2017
 # from pprint import pprint as p
-from random import choice
+from random import choice, random
 import schedule
 from mastodon import Mastodon
 import time
@@ -18,7 +18,7 @@ def make_credential(user_id, user_pw, api_base_url):
     return m
 
 
-def get_ramen(config):
+def get_ramen(config, mastodon_client):
     keyid = config["gurunavi_keyid"]
     prefs = requests.get(
         "https://api.gnavi.co.jp/master/PrefSearchAPI/20150630/",
@@ -36,7 +36,9 @@ def get_ramen(config):
                            "hit_per_page": 100
                        })
     if not res.ok:
-        message = choice(messages) + "……と思ったけど、ファンがいるから退散するわ！"
+        # Bad result; skip this.
+        return "……と思ったけど、ファンがいるから退散するわ！", []
+
     else:
         rests = res.json()['rest']
         if type(rests) is dict:
@@ -46,12 +48,17 @@ def get_ramen(config):
         else:
             print("Unknown type of rests: " + str(type(rests)))
             return "", []
-        message = choice(messages)
 
-        if not rest["pr"]:
+        if not (rest["pr"] and rest["pr"]["pr_short"]):
             return "", []
+
+        else:
+            print(rest["pr"])
+
+        # 正常系
         image_ids = []
-        for image_url in u[
+        print(rest["image_url"])
+        for image_url in [
                 rest["image_url"]["shop_image1"],
                 rest["image_url"]["shop_image2"]
         ]:
@@ -64,6 +71,7 @@ def get_ramen(config):
             with open(file_location, "wb") as f:
                 f.write(image.content)
             image_post = mastodon_client.media_post(file_location)
+            print(image_post)
             image_ids.append(image_post["id"])
 
         if rest["access"]["station"]:
@@ -74,7 +82,7 @@ def get_ramen(config):
             )
         else:
             access = ""
-        message += """
+        message = """
 {pref}にある{name}に来たわ！
 PRポイントは「{pr}」みたいね。
 {access}
@@ -83,15 +91,16 @@ URL: {url}""".format(
             name=rest["name"].strip(),
             access=access,
             url=rest["url"],
-            pr=rest["pr"]["pr_short"])
-    return message, media_ids
+            pr=rest["pr"]["pr_short"].replace("<BR>", ""))
+        return message, image_ids
 
 
 def eat_ramen(mastodon_client, config, messages):
+    time.sleep(30*60*random())
     message = ""
     while not message:
-        message, media_ids = get_ramen(config, messages)
-    # print(message)
+        message, media_ids = get_ramen(config, mastodon_client)
+    message = choice(messages) + message
     mastodon_client.status_post(message, media_ids=media_ids)
 
 
