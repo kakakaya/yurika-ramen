@@ -109,7 +109,7 @@ def post_ramen(mastodon_client, config, messages):
         if message:
             break
     message = choice(messages) + message
-    # time.sleep(60*30*random())
+    time.sleep(60*30*random())
     status = mastodon_client.status_post(message, media_ids=media_ids)
     logger.info(status.url)
     logger.debug("Successfully post status: %s", status)
