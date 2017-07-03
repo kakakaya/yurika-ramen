@@ -9,6 +9,8 @@ from mastodon import Mastodon
 import time
 import json
 import requests
+from raven.handlers.logging import SentryHandler
+from raven.conf import setup_logging
 
 
 def make_credential(user_id, user_pw, api_base_url):
@@ -104,25 +106,35 @@ URL: {url}""".format(
 
 def post_ramen(mastodon_client, config, messages):
     logger = logging.getLogger(__name__)
-    for _ in range(10):
-        message, media_ids = eat_ramen(config, mastodon_client)
-        if message:
-            break
-    message = choice(messages) + message
-    time.sleep(60*30*random())
-    status = mastodon_client.status_post(message, media_ids=media_ids)
-    logger.info(status["url"])
-    logger.debug("Successfully post status: %s", status)
+    try:
+        for _ in range(10):
+            message, media_ids = eat_ramen(config, mastodon_client)
+            if message:
+                break
+        if not message:
+            # 10回連続で上手に取得できなかった
+            message = "\n\n……パパラッチに見付かったわ！今回は退散するわよ……。次回こそ見てなさい！"
+        message = choice(messages) + message
+        time.sleep(60 * 30 * random())
+        status = mastodon_client.status_post(message, media_ids=media_ids)
+        logger.info(status["url"])
+        logger.debug("Successfully post status: %s", status)
+    except Exception as e:
+        logger.warn("Failed to post ramen: " + str(e))
 
 
 def main():
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s:%(levelname)6s:%(name)10s:%(lineno)4d:%(funcName)10s: %(message)s',
-        datefmt="%Y-%m-%d_%H-%M-%S", )
-
     with open("config.json") as f:
         config = json.load(f)
+    sentry_dsn = config.get("sentry_dsn", "")
+    if sentry_dsn:
+        handler = SentryHandler(sentry_dsn)
+        setup_logging(handler)
+    else:
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s:%(levelname)6s:%(name)10s:%(lineno)4d:%(funcName)10s: %(message)s',
+            datefmt="%Y-%m-%d_%H-%M-%S", )
 
     mastodon = make_credential(config["user_id"], config["user_pw"],
                                config["api_base_url"])
