@@ -110,6 +110,9 @@ def post_ramen(mastodon_client, config, messages):
         message, media_ids = eat_ramen(config, mastodon_client)
         if message:
             break
+    if not message:
+        # 10回連続で上手に取得できなかった
+        message = "\n\n……パパラッチに見付かったわ！今回は退散するわよ……。次回こそ見てなさい！"
     message = choice(messages) + message
     time.sleep(60*30*random())
     status = mastodon_client.status_post(message, media_ids=media_ids)
