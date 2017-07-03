@@ -9,6 +9,8 @@ from mastodon import Mastodon
 import time
 import json
 import requests
+from raven.handlers.logging import SentryHandler
+from raven.conf import setup_logging
 
 
 def make_credential(user_id, user_pw, api_base_url):
@@ -116,13 +118,17 @@ def post_ramen(mastodon_client, config, messages):
 
 
 def main():
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s:%(levelname)6s:%(name)10s:%(lineno)4d:%(funcName)10s: %(message)s',
-        datefmt="%Y-%m-%d_%H-%M-%S", )
-
     with open("config.json") as f:
         config = json.load(f)
+    sentry_dsn = config.get("sentry_dsn", "")
+    if sentry_dsn:
+        handler = SentryHandler(sentry_dsn)
+        setup_logging(handler)
+    else:
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s:%(levelname)6s:%(name)10s:%(lineno)4d:%(funcName)10s: %(message)s',
+            datefmt="%Y-%m-%d_%H-%M-%S", )
 
     mastodon = make_credential(config["user_id"], config["user_pw"],
                                config["api_base_url"])

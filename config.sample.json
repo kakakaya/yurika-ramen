@@ -27,5 +27,6 @@
         "スープに浮かぶ油　今僕を照らせ　脆く儚い心を灯せ"
     ],
     "gurunavi_keyid": "",
-    "google_api_key": ""
+    "google_api_key": "",
+    "sentry_dsn": ""
 }
